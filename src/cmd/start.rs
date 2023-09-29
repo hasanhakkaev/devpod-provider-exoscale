@@ -9,8 +9,8 @@ pub struct Start {}
 
 impl Start {
     pub async fn execute(&self) -> Result<()> {
-        let hetzner = ExoscaleProvider::new_provider(false);
-        match hetzner {
+        let exoscale = ExoscaleProvider::new_provider(false);
+        match exoscale {
             Ok(provider) => {
                 let start = provider.start().await;
                 match start {

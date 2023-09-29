@@ -9,8 +9,8 @@ pub struct Delete {}
 
 impl Delete {
     pub async fn execute(&self) -> Result<()> {
-        let hetzner = ExoscaleProvider::new_provider(false);
-        match hetzner {
+        let exoscale = ExoscaleProvider::new_provider(false);
+        match exoscale {
             Ok(provider) => {
                 let create = provider.delete().await;
                 match create {

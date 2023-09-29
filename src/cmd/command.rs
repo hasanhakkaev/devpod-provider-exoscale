@@ -10,8 +10,8 @@ pub struct Command {}
 
 impl Command {
     pub async fn execute(&self) -> Result<()> {
-        let hetzner = ExoscaleProvider::new_provider(false);
-        match hetzner {
+        let exoscale = ExoscaleProvider::new_provider(false);
+        match exoscale {
             Ok(provider) => {
                 let command = env::var("COMMAND");
                 let private_key;

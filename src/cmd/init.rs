@@ -9,8 +9,8 @@ pub struct Init {}
 
 impl Init {
     pub async fn execute(&self) -> Result<()> {
-        let hetzner = ExoscaleProvider::new_provider(true);
-        match hetzner {
+        let exoscale = ExoscaleProvider::new_provider(true);
+        match exoscale {
             Ok(provider) => provider.init().await,
             Err(err) => return Err(err),
         }
