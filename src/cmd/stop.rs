@@ -12,9 +12,8 @@ impl Stop {
         match exoscale {
             Ok(provider) => {
                 let stop = provider.stop().await;
-                match stop {
-                    Err(err) => return Err(anyhow::anyhow!("Error stopping instance: {}", err)),
-                    _ => {}
+                if let Err(err) = stop {
+                    return Err(anyhow::anyhow!("Error stopping instance: {}", err));
                 }
             }
             Err(err) => return Err(err),

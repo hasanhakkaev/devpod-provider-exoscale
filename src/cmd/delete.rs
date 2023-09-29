@@ -13,9 +13,8 @@ impl Delete {
         match exoscale {
             Ok(provider) => {
                 let create = provider.delete().await;
-                match create {
-                    Err(err) => return Err(anyhow::anyhow!("Error deleting instance: {}", err)),
-                    _ => {}
+                if let Err(err) = create {
+                    return Err(anyhow::anyhow!("Error deleting instance: {}", err));
                 }
             }
             Err(err) => return Err(err),

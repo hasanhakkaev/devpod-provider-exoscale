@@ -13,9 +13,8 @@ impl Create {
         match exoscale {
             Ok(provider) => {
                 let create = provider.create().await;
-                match create {
-                    Err(err) => return Err(anyhow::anyhow!("Error creating instance: {}", err)),
-                    _ => {}
+                if let Err(err) = create {
+                    return Err(anyhow::anyhow!("Error creating instance: {}", err));
                 }
             }
             Err(err) => return Err(err),

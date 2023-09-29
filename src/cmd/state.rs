@@ -12,11 +12,8 @@ impl State {
         match exoscale {
             Ok(provider) => {
                 let status = provider.state().await;
-                match status {
-                    Err(err) => {
-                        return Err(anyhow::anyhow!("Error getting instance state: {}", err))
-                    }
-                    _ => {}
+                if let Err(err) = status {
+                    return Err(anyhow::anyhow!("Error getting instance state: {}", err));
                 }
                 println!("{}", status.unwrap());
             }

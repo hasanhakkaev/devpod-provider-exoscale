@@ -22,13 +22,9 @@ impl ExoscaleProvider {
         let mut configuration = Configuration::new();
         let options = from_env(init);
 
-        configuration.base_path =
-            format!("https://api-{:?}.exoscale.com/v2", options.zone.as_str());
-
         match key {
             Ok(key) => {
-                configuration.api_key =
-                    Some(exoscale::apis::configuration::ApiKey { key, prefix: None }).unwrap()
+                configuration.api_key = exoscale::apis::configuration::ApiKey { key, prefix: None }
             }
             Err(err) => return Err(anyhow::anyhow!("Error getting API key: {}", err)),
         }
@@ -88,14 +84,14 @@ impl ExoscaleProvider {
 
     pub async fn delete(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_ref().map(|s| s.as_str());
+        let id: Option<&str> = devpod_instance.id.as_deref();
         exoscale::apis::instance_api::delete_instance(&self.configuration, id.unwrap()).await?;
         Ok(())
     }
 
     pub async fn start(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_ref().map(|s| s.as_str());
+        let id: Option<&str> = devpod_instance.id.as_deref();
         exoscale::apis::instance_api::start_instance(
             &self.configuration,
             id.unwrap(),
@@ -109,22 +105,21 @@ impl ExoscaleProvider {
 
     pub async fn stop(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_ref().map(|s| s.as_str());
+        let id: Option<&str> = devpod_instance.id.as_deref();
         exoscale::apis::instance_api::stop_instance(&self.configuration, id.unwrap()).await?;
         Ok(())
     }
 
     pub async fn state(&self) -> Result<String> {
         let devpod_instance = self.get_devpod_instance().await?;
-        return if devpod_instance.state == Option::from(exoscale::models::instance::State::Running)
-        {
+        if devpod_instance.state == Option::from(exoscale::models::instance::State::Running) {
             Ok("Running".to_string())
         } else if devpod_instance.state == Option::from(exoscale::models::instance::State::Stopped)
         {
             Ok("Stopped".to_string())
         } else {
             Ok("Error".to_string())
-        };
+        }
     }
 
     pub async fn create(&self) -> Result<()> {
@@ -154,7 +149,7 @@ impl ExoscaleProvider {
                                 if zone
                                     == &map_str_to_zone_name(self.options.zone.as_str()).unwrap()
                                 {
-                                    Some(zone.clone())
+                                    Some(*zone)
                                 } else {
                                     None
                                 }

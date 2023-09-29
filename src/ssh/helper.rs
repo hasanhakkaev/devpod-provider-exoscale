@@ -63,10 +63,10 @@ pub async fn new_ssh_client(
         }
         Ok("".to_string())
     } else {
-        return Err(Error::new(
+        Err(Error::new(
             ErrorCode::Session(0),
             "Error connecting to ssh server",
-        ));
+        ))
     }
 }
 

@@ -13,9 +13,8 @@ impl Start {
         match exoscale {
             Ok(provider) => {
                 let start = provider.start().await;
-                match start {
-                    Err(err) => return Err(anyhow::anyhow!("Error starting instance: {}", err)),
-                    _ => {}
+                if let Err(err) = start {
+                    return Err(anyhow::anyhow!("Error starting instance: {}", err));
                 }
             }
             Err(err) => return Err(err),

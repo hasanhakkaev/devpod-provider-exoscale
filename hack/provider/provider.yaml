@@ -44,9 +44,8 @@ options:
     default: docker-ce
   INSTANCE_TYPE:
     description: The machine type to use, arm based machines are only available in certain zones.
-    default: cx31
+    default: tiny
     suggestions:
-      - micro
       - tiny
       - small
       - medium
@@ -55,7 +54,7 @@ options:
       - huge
   DISK_SIZE:
     description: The disk size to use.
-    default: 50
+    default: 10
     suggestions:
       - 10
       - 50
