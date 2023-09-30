@@ -1,5 +1,4 @@
-use exoscale::models::instance_type::Size;
-use exoscale::models::ZoneName;
+use exoscale_rs::models::instance_type::Size;
 use ssh2::{Error, ErrorCode, Session};
 use std::io;
 use std::io::{Read, Write};
@@ -70,9 +69,9 @@ pub async fn new_ssh_client(
     }
 }
 
-pub fn execute_command(command: String, sess: Session) -> Result<String, Error> {
+/*pub fn execute_command(command: String, sess: Session) -> Result<String, Error> {
     Ok("".to_string())
-}
+}*/
 
 pub fn map_str_to_size(size_str: &str) -> Option<Size> {
     match size_str {
@@ -87,17 +86,6 @@ pub fn map_str_to_size(size_str: &str) -> Option<Size> {
         "micro" => Some(Size::Micro),
         "colossus" => Some(Size::Colossus),
         "tiny" => Some(Size::Tiny),
-        _ => None,
-    }
-}
-pub fn map_str_to_zone_name(zone_name_str: &str) -> Option<ZoneName> {
-    match zone_name_str {
-        "ch-dk-2" => Some(ZoneName::ChDk2),
-        "de-muc-1" => Some(ZoneName::DeMuc1),
-        "ch-gva-2" => Some(ZoneName::ChGva2),
-        "at-vie-1" => Some(ZoneName::AtVie1),
-        "de-fra-1" => Some(ZoneName::DeFra1),
-        "bg-sof-1" => Some(ZoneName::BgSof1),
         _ => None,
     }
 }

@@ -1,11 +1,20 @@
 use crate::options::options::{from_env, Options};
-use crate::ssh::helper::{map_str_to_size, map_str_to_zone_name};
+use crate::ssh::helper::map_str_to_size;
 use crate::ssh::keys;
 use anyhow::{Context, Result};
-use exoscale::apis::configuration::Configuration;
-use exoscale::models::{Instance, InstanceType, Template};
+use exoscale_rs::apis::configuration::Configuration;
+use exoscale_rs::apis::instance_api::{
+    CreateInstanceParams, DeleteInstanceParams, ListInstancesParams, StartInstanceParams,
+    StopInstanceParams,
+};
+use exoscale_rs::apis::template_api::ListTemplatesParams;
+use exoscale_rs::models::start_instance_request::RescueProfile::NetbootEfi;
+use exoscale_rs::models::{
+    InstanceType, ListInstances200ResponseInstancesInner, StartInstanceRequest, Template,
+};
 use std::collections::HashMap;
 use std::env;
+use uuid::Uuid;
 
 pub struct ExoscaleProvider {
     configuration: Configuration,
@@ -14,23 +23,23 @@ pub struct ExoscaleProvider {
 
 impl ExoscaleProvider {
     pub fn new_provider(init: bool) -> Result<ExoscaleProvider> {
-        let key = env::var("EXOSCALE_API_KEY")
+        let api_key = env::var("EXOSCALE_API_KEY")
             .context("Please set EXOSCALE_API_KEY environment variable");
-        let secret = env::var("EXOSCALE_API_SECRET")
+        let api_secret = env::var("EXOSCALE_API_SECRET")
             .context("Please set EXOSCALE_API_SECRET environment variable");
 
         let mut configuration = Configuration::new();
         let options = from_env(init);
 
-        match key {
-            Ok(key) => {
-                configuration.api_key = exoscale::apis::configuration::ApiKey { key, prefix: None }
+        match api_key {
+            Ok(api_key) => {
+                configuration.api_key = api_key;
             }
             Err(err) => return Err(anyhow::anyhow!("Error getting API key: {}", err)),
         }
-        match secret {
-            Ok(secret) => {
-                configuration.secret = secret;
+        match api_secret {
+            Ok(api_secret) => {
+                configuration.api_secret = api_secret;
             }
             Err(err) => return Err(anyhow::anyhow!("Error getting API secret: {}", err)),
         }
@@ -42,19 +51,25 @@ impl ExoscaleProvider {
         Ok(provider)
     }
 
-    pub async fn get_devpod_instance(&self) -> Result<Box<Instance>> {
-        let instances =
-            exoscale::apis::instance_api::list_instances(&self.configuration, None, None).await;
-        match instances {
-            Err(err) => return Err(anyhow::anyhow!("Error getting instance list: {}", err)),
-            _ => {}
+    pub async fn get_devpod_instance(&self) -> Result<Box<ListInstances200ResponseInstancesInner>> {
+        let instances = exoscale_rs::apis::instance_api::list_instances(
+            &self.configuration,
+            ListInstancesParams {
+                ip_address: None,
+                manager_id: None,
+                manager_type: None,
+            },
+        )
+        .await;
+        if let Err(err) = instances {
+            return Err(anyhow::anyhow!("Error getting instance list: {}", err));
         }
         let instance_list = instances.unwrap().instances;
         if instance_list.is_none() {
             return Err(anyhow::anyhow!("No instance found"));
         }
 
-        let instance: Box<Instance> = Box::new(
+        let instance: Box<ListInstances200ResponseInstancesInner> = Box::new(
             instance_list
                 .unwrap()
                 .iter()
@@ -73,30 +88,46 @@ impl ExoscaleProvider {
                 })
                 .unwrap(),
         );
+
         Ok(instance)
     }
 
     pub async fn init(&self) -> Result<()> {
-        let _list =
-            exoscale::apis::instance_api::list_instances(&self.configuration, None, None).await?;
+        let _list = exoscale_rs::apis::instance_api::list_instances(
+            &self.configuration,
+            ListInstancesParams {
+                ip_address: None,
+                manager_id: None,
+                manager_type: None,
+            },
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn delete(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_deref();
-        exoscale::apis::instance_api::delete_instance(&self.configuration, id.unwrap()).await?;
+        let id: Option<Uuid> = devpod_instance.id;
+        exoscale_rs::apis::instance_api::delete_instance(
+            &self.configuration,
+            DeleteInstanceParams {
+                id: id.as_ref().unwrap().to_string(),
+            },
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn start(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_deref();
-        exoscale::apis::instance_api::start_instance(
+        let id: Option<Uuid> = devpod_instance.id;
+        exoscale_rs::apis::instance_api::start_instance(
             &self.configuration,
-            id.unwrap(),
-            exoscale::models::StartInstanceRequest {
-                rescue_profile: Default::default(),
+            StartInstanceParams {
+                id: id.as_ref().unwrap().to_string(),
+                start_instance_request: StartInstanceRequest {
+                    rescue_profile: Option::from(NetbootEfi),
+                },
             },
         )
         .await?;
@@ -105,16 +136,22 @@ impl ExoscaleProvider {
 
     pub async fn stop(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<&str> = devpod_instance.id.as_deref();
-        exoscale::apis::instance_api::stop_instance(&self.configuration, id.unwrap()).await?;
+        let id: Option<Uuid> = devpod_instance.id;
+        exoscale_rs::apis::instance_api::stop_instance(
+            &self.configuration,
+            StopInstanceParams {
+                id: id.as_ref().unwrap().to_string(),
+            },
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn state(&self) -> Result<String> {
         let devpod_instance = self.get_devpod_instance().await?;
-        if devpod_instance.state == Option::from(exoscale::models::instance::State::Running) {
+        if devpod_instance.state == Option::from(exoscale_rs::models::InstanceState::Running) {
             Ok("Running".to_string())
-        } else if devpod_instance.state == Option::from(exoscale::models::instance::State::Stopped)
+        } else if devpod_instance.state == Option::from(exoscale_rs::models::InstanceState::Stopped)
         {
             Ok("Stopped".to_string())
         } else {
@@ -125,8 +162,14 @@ impl ExoscaleProvider {
     pub async fn create(&self) -> Result<()> {
         let public_key_base = keys::get_public_key_base(self.options.machine_folder.clone());
 
-        let templates =
-            exoscale::apis::template_api::list_templates(&self.configuration, None, None).await;
+        let templates = exoscale_rs::apis::template_api::list_templates(
+            &self.configuration,
+            ListTemplatesParams {
+                family: None,
+                visibility: None,
+            },
+        )
+        .await;
         if let Err(err) = templates {
             return Err(anyhow::anyhow!("Error getting template list: {}", err));
         }
@@ -139,23 +182,7 @@ impl ExoscaleProvider {
                 .unwrap()
                 .iter()
                 .find_map(|template| {
-                    if template.name == Some(self.options.template.clone())
-                        && template
-                            .zones
-                            .clone()
-                            .unwrap()
-                            .iter()
-                            .find_map(|zone| {
-                                if zone
-                                    == &map_str_to_zone_name(self.options.zone.as_str()).unwrap()
-                                {
-                                    Some(*zone)
-                                } else {
-                                    None
-                                }
-                            })
-                            .is_some()
-                    {
+                    if template.name.as_ref().unwrap() == self.options.template.as_str() {
                         Some(template.clone())
                     } else {
                         None
@@ -165,7 +192,7 @@ impl ExoscaleProvider {
         );
 
         let instance_types =
-            exoscale::apis::instance_type_api::list_instance_types(&self.configuration).await;
+            exoscale_rs::apis::instance_type_api::list_instance_types(&self.configuration).await;
         if let Err(err) = instance_types {
             return Err(anyhow::anyhow!("Error getting instance type list: {}", err));
         }
@@ -193,11 +220,14 @@ impl ExoscaleProvider {
         let mut labels = HashMap::new();
         labels.insert(self.options.machine_id.clone(), "true".to_string());
 
-        let request_params = exoscale::models::CreateInstanceRequest {
+        let request_params = exoscale_rs::models::CreateInstanceRequest {
+            anti_affinity_groups: None,
             instance_type,
             template,
             disk_size: self.options.disk_size.parse().unwrap(),
             labels: Some(labels),
+            auto_start: None,
+            security_groups: None,
             user_data: Some(format!(
                 r#"#cloud-config
 users:
@@ -209,29 +239,38 @@ users:
   sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]"#,
                 public_key_base
             )),
-            ..Default::default()
+            deploy_target: None,
+            public_ip_assignment: None,
+            name: None,
+            ssh_key: None,
+            ipv6_enabled: None,
+            ssh_keys: None,
         };
 
-        let result =
-            exoscale::apis::instance_api::create_instance(&self.configuration, request_params)
-                .await?;
-
+        let _ = exoscale_rs::apis::instance_api::create_instance(
+            &self.configuration,
+            CreateInstanceParams {
+                create_instance_request: request_params,
+            },
+        )
+        .await?;
+        /*
         let mut still_creating = true;
 
         while still_creating {
-            let instance = exoscale::apis::instance_api::get_instance(
+            let instance = exoscale_rs::apis::instance_api::get_instance(
                 &self.configuration,
                 result.id.as_ref().unwrap(),
             )
             .await?
             .clone();
 
-            if instance.state == Option::from(exoscale::models::instance::State::Running) {
+            if instance.state == Option::from(exoscale_rs::models::InstanceState::Running) {
                 still_creating = false;
             } else {
                 std::thread::sleep(std::time::Duration::from_secs(5));
             }
-        }
+        }*/
         Ok(())
     }
 }

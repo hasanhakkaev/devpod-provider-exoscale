@@ -14,7 +14,7 @@ impl Init {
             Ok(provider) => provider.init().await,
             Err(err) => return Err(err),
         }
-        .expect("TODO: panic message");
+        .expect("Error initializing account");
         Ok(())
     }
 }
