@@ -27,8 +27,10 @@ impl ExoscaleProvider {
             .context("Please set EXOSCALE_API_KEY environment variable");
         let api_secret = env::var("EXOSCALE_API_SECRET")
             .context("Please set EXOSCALE_API_SECRET environment variable");
+        let zone =
+            env::var("EXOSCALE_ZONE").context("Please set EXOSCALE_ZONE environment variable");
 
-        let mut configuration = Configuration::new();
+        let mut configuration = Configuration::new(zone.as_ref().unwrap());
         let options = from_env(init);
 
         match api_key {
@@ -42,6 +44,12 @@ impl ExoscaleProvider {
                 configuration.api_secret = api_secret;
             }
             Err(err) => return Err(anyhow::anyhow!("Error getting API secret: {}", err)),
+        }
+        match zone {
+            Ok(zone) => {
+                configuration.zone = zone;
+            }
+            Err(err) => return Err(anyhow::anyhow!("Error getting ZONE: {}", err)),
         }
         let provider = ExoscaleProvider {
             configuration,
@@ -78,8 +86,16 @@ impl ExoscaleProvider {
                         .labels
                         .as_ref()
                         .unwrap()
-                        .get(self.options.machine_id.as_str())
-                        .is_some()
+                        .get("devpod_enabled".to_string().as_str())
+                        .unwrap()
+                        == "true".to_string().as_str()
+                        && instance
+                            .labels
+                            .as_ref()
+                            .unwrap()
+                            .get("devpod_instance_id".to_string().as_str())
+                            .unwrap()
+                            == self.options.machine_id.clone().as_str()
                     {
                         Some(instance.clone())
                     } else {
@@ -218,7 +234,15 @@ impl ExoscaleProvider {
         );
 
         let mut labels = HashMap::new();
-        labels.insert(self.options.machine_id.clone(), "true".to_string());
+        labels.insert("devpod_instance".to_string(), "true".to_string());
+        labels.insert(
+            "devpod_instance_id".to_string(),
+            self.options.machine_id.clone(),
+        );
+        labels.insert(
+            "devpod_instance_folder".to_string(),
+            self.options.machine_folder.clone(),
+        );
 
         let request_params = exoscale_rs::models::CreateInstanceRequest {
             anti_affinity_groups: None,
@@ -226,22 +250,22 @@ impl ExoscaleProvider {
             template,
             disk_size: self.options.disk_size.parse().unwrap(),
             labels: Some(labels),
-            auto_start: None,
+            auto_start: Option::from(true),
             security_groups: None,
             user_data: Some(format!(
                 r#"#cloud-config
-users:
-- name: devpod
-  shell: /bin/bash
-  groups: [ sudo, docker ]
-  ssh_authorized_keys:
-  - {}
-  sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]"#,
+            users:
+            - name: devpod
+              shell: /bin/bash
+              groups: [ sudo, docker ]
+              ssh_authorized_keys:
+              - {}
+              sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]"#,
                 public_key_base
             )),
             deploy_target: None,
-            public_ip_assignment: None,
-            name: None,
+            public_ip_assignment: Some(exoscale_rs::models::PublicIpAssignment::Inet4),
+            name: Some(self.options.machine_id.clone().to_string()),
             ssh_key: None,
             ipv6_enabled: None,
             ssh_keys: None,
@@ -254,23 +278,7 @@ users:
             },
         )
         .await?;
-        /*
-        let mut still_creating = true;
 
-        while still_creating {
-            let instance = exoscale_rs::apis::instance_api::get_instance(
-                &self.configuration,
-                result.id.as_ref().unwrap(),
-            )
-            .await?
-            .clone();
-
-            if instance.state == Option::from(exoscale_rs::models::InstanceState::Running) {
-                still_creating = false;
-            } else {
-                std::thread::sleep(std::time::Duration::from_secs(5));
-            }
-        }*/
         Ok(())
     }
 }

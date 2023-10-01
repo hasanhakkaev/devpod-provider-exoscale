@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = { version = "1.0.71", features = [] }
 clap = { version = "4.3.0", features = ["derive"] }
 crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
-exoscale-rs = "2.0.0"
+exoscale-rs = "2.0.1"
 openssh-keys = "0.6.0"
 openssl = { version = "0.10.52", features = ["vendored"] }
 petname = "1.1.3"

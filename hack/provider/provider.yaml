@@ -5,7 +5,6 @@ description: |-
 icon: https://avatars.githubusercontent.com/u/2023286?s=200&v=4
 optionGroups:
   - options:
-      - ZONE
       - TEMPLATE
       - INSTANCE_TYPE
       - DISK_SIZE
@@ -26,7 +25,7 @@ options:
     description: The Exoscale API secret to use.
     required: true
     password: true
-  ZONE:
+  EXOSCALE_ZONE:
     description: The Exoscale Zone to use.
     required: true
     default: at-vie-1
@@ -41,7 +40,24 @@ options:
       - at-vie-2
   TEMPLATE:
     description: The template to use.
-    default: docker-ce
+    default: Exoscale Container-Optimized Instance
+    suggestions:
+      - Exoscale Container-Optimized Instance
+      - Linux Arch Rolling
+      - Linux CentOS Stream 8 64-bit
+      - Linux CentOS Stream 9 64-bit
+      - Linux Debian 10 (Buster) 64-bit
+      - Linux Debian 11 (Bullseye) 64-bit
+      - Linux Debian 12 (Bookworm) 64-bit
+      - Linux Ubuntu 20.04 LTS 64-bit
+      - Linux Ubuntu 22.04 LTS 64-bit
+      - Linux Ubuntu 23.04 64-bit
+      - Linux Fedora CoreOS 38 64-bit
+      - Rocky Linux 8 (Green Obsidian) 64-bit
+      - Rocky Linux 9 (Blue Onyx) 64-bit
+      - Linux CentOS 7 64-bit
+      - Linux RedHat 7.9 BYOL 64-bit
+      - Linux RedHat 8.2 BYOL 64-bit
   INSTANCE_TYPE:
     description: The machine type to use, arm based machines are only available in certain zones.
     default: tiny
