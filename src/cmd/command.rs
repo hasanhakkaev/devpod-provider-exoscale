@@ -27,14 +27,11 @@ impl Command {
                         provider.options.machine_folder.clone(),
                     );
                 }
-                let instance = provider.get_devpod_instance().await;
-                if let Err(err) = instance {
-                    return Err(err);
-                }
+                let instance = provider.get_devpod_instance().await?;
 
                 let result = ssh::helper::new_ssh_client(
                     "devpod".to_string(),
-                    instance.unwrap().public_ip.unwrap().clone(),
+                    instance.public_ip.unwrap().clone(),
                     private_key.clone(),
                     command.unwrap(),
                 )

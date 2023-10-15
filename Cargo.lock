@@ -424,7 +424,7 @@ dependencies = [
 
 [[package]]
 name = "devpod-provider-exoscale"
-version = "0.1.0"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "clap 4.4.6",

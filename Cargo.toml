@@ -1,9 +1,15 @@
 [package]
 name = "devpod-provider-exoscale"
-version = "0.1.0"
+description = "DevPod provider for Exoscale Cloud"
+version = "0.0.4"
 edition = "2021"
+authors = ["Hasan Hakkaev <hasan.hakkaev@gmx.at>"]
+repository = "https://github.com/hasanhakkaev/devpod-provider-exoscalei"
+license = "MPL-2.0"
+license-file = "LICENSE"
+readme = "README.md"
+keywords = ["devpod","exoscale"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = { version = "1.0.71", features = [] }

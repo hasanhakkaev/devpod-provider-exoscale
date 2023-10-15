@@ -7,10 +7,14 @@ use exoscale_rs::apis::instance_api::{
     CreateInstanceParams, DeleteInstanceParams, ListInstancesParams, StartInstanceParams,
     StopInstanceParams,
 };
+use exoscale_rs::apis::security_group_api::{
+    AddRuleToSecurityGroupParams, ListSecurityGroupsParams,
+};
 use exoscale_rs::apis::template_api::ListTemplatesParams;
 use exoscale_rs::models::start_instance_request::RescueProfile::NetbootEfi;
 use exoscale_rs::models::{
-    InstanceType, ListInstances200ResponseInstancesInner, StartInstanceRequest, Template,
+    AddRuleToSecurityGroupRequest, InstanceType, ListInstances200ResponseInstancesInner,
+    SecurityGroupResource, StartInstanceRequest, Template,
 };
 use std::collections::HashMap;
 use std::env;
@@ -178,6 +182,7 @@ impl ExoscaleProvider {
     pub async fn create(&self) -> Result<()> {
         let public_key_base = keys::get_public_key_base(self.options.machine_folder.clone());
 
+        // Listing templates
         let templates = exoscale_rs::apis::template_api::list_templates(
             &self.configuration,
             ListTemplatesParams {
@@ -207,6 +212,7 @@ impl ExoscaleProvider {
                 .unwrap(),
         );
 
+        // Listing instance types
         let instance_types =
             exoscale_rs::apis::instance_type_api::list_instance_types(&self.configuration).await;
         if let Err(err) = instance_types {
@@ -216,7 +222,6 @@ impl ExoscaleProvider {
         if instance_type_list.is_none() {
             return Err(anyhow::anyhow!("No instance type found"));
         }
-
         let instance_type: Box<InstanceType> = Box::new(
             instance_type_list
                 .unwrap()
@@ -233,6 +238,7 @@ impl ExoscaleProvider {
                 .unwrap(),
         );
 
+        // Creating labels
         let mut labels = HashMap::new();
         labels.insert("devpod_instance".to_string(), "true".to_string());
         labels.insert(
@@ -244,6 +250,7 @@ impl ExoscaleProvider {
             self.options.machine_folder.clone(),
         );
 
+        // Constructing the requst parameters for Instance creation
         let request_params = exoscale_rs::models::CreateInstanceRequest {
             anti_affinity_groups: None,
             instance_type,
@@ -271,14 +278,77 @@ impl ExoscaleProvider {
             ssh_keys: None,
         };
 
-        let _ = exoscale_rs::apis::instance_api::create_instance(
+        // Creating the instance
+        let instance = exoscale_rs::apis::instance_api::create_instance(
             &self.configuration,
             CreateInstanceParams {
                 create_instance_request: request_params,
             },
         )
-        .await?;
+        .await;
+        if let Err(err) = instance {
+            return Err(anyhow::anyhow!("Error getting instance type list: {}", err));
+        }
 
+        // Listing security groups
+        let security_groups = exoscale_rs::apis::security_group_api::list_security_groups(
+            &self.configuration,
+            ListSecurityGroupsParams {
+                visibility: Some("private".to_string()),
+            },
+        )
+        .await;
+        if let Err(err) = security_groups {
+            return Err(anyhow::anyhow!(
+                "Error getting security group list: {}",
+                err
+            ));
+        }
+
+        let security_group_list = security_groups.unwrap().security_groups;
+        if security_group_list.is_none() {
+            return Err(anyhow::anyhow!("No security groups found"));
+        }
+
+        let security_group_id = security_group_list
+            .unwrap()
+            .iter()
+            .find_map(|security_group| {
+                if security_group.name == Some("default".to_string()) {
+                    Some(security_group.id)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let security_group: Box<SecurityGroupResource> = Box::new(SecurityGroupResource {
+            id: security_group_id,
+            name: Some("default".to_string()),
+            visibility: Some(exoscale_rs::models::security_group_resource::Visibility::Private),
+        });
+
+        let _ =
+            exoscale_rs::apis::security_group_api::add_rule_to_security_group(
+                &self.configuration,
+                AddRuleToSecurityGroupParams {
+                    id: security_group_id.unwrap().to_string(),
+                    add_rule_to_security_group_request: AddRuleToSecurityGroupRequest {
+                        description: Some(("desc").to_string()),
+                        start_port: Some(22),
+                        end_port: Some(22),
+                        flow_direction: exoscale_rs::models::add_rule_to_security_group_request::FlowDirection::Ingress,
+                        icmp: Some(Box::new(exoscale_rs::models::add_rule_to_security_group_request_icmp::AddRuleToSecurityGroupRequestIcmp{
+                            code: Some(11),
+                            r#type:Some(11),
+                        })),
+                        network:Some("0.0.0.0/8".to_string()),
+                        protocol: exoscale_rs::models::add_rule_to_security_group_request::Protocol::Tcp,
+                        security_group: Some(security_group),
+                    },
+                },
+            )
+            .await?;
         Ok(())
     }
 }
