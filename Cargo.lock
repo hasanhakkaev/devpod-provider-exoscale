@@ -493,9 +493,9 @@ dependencies = [
 
 [[package]]
 name = "exoscale-rs"
-version = "2.0.1"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a271de294678ab1e0f78625d97abcafca57f3941d0b55b59fb08d6f9bc35fd7"
+checksum = "7db48b1880cada6fa954c15e4d6fd148f129895c34a71aa337a0c124c7ef2347"
 dependencies = [
  "base64",
  "hmac",
