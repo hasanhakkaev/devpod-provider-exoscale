@@ -1,7 +1,7 @@
 [package]
 name = "devpod-provider-exoscale"
 description = "DevPod provider for Exoscale Cloud"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 authors = ["Hasan Hakkaev <hasan.hakkaev@gmx.at>"]
 repository = "https://github.com/hasanhakkaev/devpod-provider-exoscalei"
