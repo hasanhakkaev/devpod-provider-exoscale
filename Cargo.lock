@@ -317,7 +317,7 @@ dependencies = [
 
 [[package]]
 name = "devpod-provider-exoscale"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "base64 0.10.1",
