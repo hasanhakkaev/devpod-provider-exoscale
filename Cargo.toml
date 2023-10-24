@@ -6,19 +6,17 @@ edition = "2021"
 authors = ["Hasan Hakkaev <hasan.hakkaev@gmx.at>"]
 repository = "https://github.com/hasanhakkaev/devpod-provider-exoscalei"
 license = "MPL-2.0"
-license-file = "LICENSE"
 readme = "README.md"
 keywords = ["devpod","exoscale"]
 
 
 [dependencies]
-anyhow = { version = "1.0.71", features = [] }
-clap = { version = "4.3.0", features = ["derive"] }
-crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
-exoscale-rs = "2.0.1"
-openssh-keys = "0.6.0"
-openssl = { version = "0.10.52", features = ["vendored"] }
-petname = "1.1.3"
+anyhow = { version = "1.0.75", features = [] }
+clap = { version = "4.4.6", features = ["derive"] }
+exoscale-rs = "2.0.3"
+openssh-keys = "0.6.2"
+openssl = { version = "0.10.57", features = ["vendored"] }
 ssh2 = "0.9.4"
 tokio = { version = "1.33.0", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "1.4.1", features = ["v4"] }
+uuid = { version = "1.5.0", features = ["v4"] }
+base64 = { version = "0.10", features = [] }
