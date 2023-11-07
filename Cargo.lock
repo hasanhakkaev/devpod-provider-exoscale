@@ -109,15 +109,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
-dependencies = [
- "byteorder",
-]
-
-[[package]]
-name = "base64"
 version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ba43ea6f343b788c8764558649e08df62f86c6ef251fdaeb1ffd010a9ae50a2"
@@ -320,7 +311,7 @@ name = "devpod-provider-exoscale"
 version = "0.0.5"
 dependencies = [
  "anyhow",
- "base64 0.10.1",
+ "base64",
  "clap",
  "exoscale-rs",
  "openssh-keys",
@@ -372,7 +363,7 @@ version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7db48b1880cada6fa954c15e4d6fd148f129895c34a71aa337a0c124c7ef2347"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "hmac",
  "reqwest",
  "serde",
@@ -876,7 +867,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c75a0ec2d1b302412fb503224289325fcc0e44600176864804c7211b055cfd58"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "byteorder",
  "md-5",
  "sha2",
@@ -1034,7 +1025,7 @@ version = "0.11.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "046cd98826c46c2ac8ddecae268eb5c2e58628688a5fc7a2643704a73faba95b"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -1179,7 +1170,7 @@ version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64cd236ccc1b7a29e7e2739f27c0b2dd199804abc4290e32f59f3b68d6405c23"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "chrono",
  "hex",
  "indexmap 1.9.3",
