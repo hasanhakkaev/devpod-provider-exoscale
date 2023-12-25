@@ -3,17 +3,17 @@ use anyhow::Result;
 use clap::Parser;
 
 #[derive(Parser)]
-#[clap(name = "state", about = "State of an instance")]
-pub struct State {}
+#[clap(name = "status", about = "Status of an instance")]
+pub struct Status {}
 
-impl State {
+impl Status {
     pub async fn execute(&self) -> Result<()> {
         let exoscale = ExoscaleProvider::new_provider(false);
         match exoscale {
             Ok(provider) => {
-                let status = provider.state().await;
+                let status = provider.status().await;
                 if let Err(err) = status {
-                    return Err(anyhow::anyhow!("Error getting instance state: {}", err));
+                    return Err(anyhow::anyhow!("Error getting instance status: {}", err));
                 }
                 println!("{}", status.unwrap());
             }

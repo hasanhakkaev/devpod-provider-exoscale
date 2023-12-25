@@ -11,7 +11,7 @@ use crate::cmd::create::Create;
 use crate::cmd::delete::Delete;
 use crate::cmd::init::Init;
 use crate::cmd::start::Start;
-use crate::cmd::state::State;
+use crate::cmd::status::Status;
 use crate::cmd::stop::Stop;
 
 #[derive(Parser)]
@@ -22,7 +22,7 @@ enum DevPodProviderExoscale {
     Command(Command),
     Start(Start),
     Stop(Stop),
-    Status(State),
+    Status(Status),
 }
 
 impl DevPodProviderExoscale {
