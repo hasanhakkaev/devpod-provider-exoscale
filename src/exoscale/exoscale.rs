@@ -2,7 +2,7 @@ use crate::options::options::{from_env, Options};
 use crate::ssh::helper::map_str_to_size;
 use crate::ssh::keys;
 use anyhow::{Context, Result};
-use base64::encode;
+use base64::{engine::general_purpose, Engine as _};
 use exoscale_rs::apis::configuration::Configuration;
 use exoscale_rs::apis::instance_api::{
     CreateInstanceParams, DeleteInstanceParams, ListInstancesParams, StartInstanceParams,
@@ -10,20 +10,20 @@ use exoscale_rs::apis::instance_api::{
 };
 use exoscale_rs::apis::security_group_api::{
     AddExternalSourceToSecurityGroupParams, AddRuleToSecurityGroupParams,
-    CreateSecurityGroupParams, GetSecurityGroupParams,
+    CreateSecurityGroupParams, DeleteSecurityGroupParams, GetSecurityGroupParams,
 };
-use exoscale_rs::apis::ssh_key_api::RegisterSshKeyParams;
 use exoscale_rs::apis::template_api::ListTemplatesParams;
 use exoscale_rs::models::security_group_resource::Visibility;
 use exoscale_rs::models::start_instance_request::RescueProfile::NetbootEfi;
 use exoscale_rs::models::{
     AddExternalSourceToSecurityGroupRequest, AddRuleToSecurityGroupRequest,
     CreateSecurityGroupRequest, InstanceType, ListInstances200ResponseInstancesInner,
-    RegisterSshKeyRequest, SecurityGroup, SecurityGroupResource, SshKey, StartInstanceRequest,
-    Template,
+    SecurityGroup, SecurityGroupResource, StartInstanceRequest, Template,
 };
 use std::collections::HashMap;
 use std::env;
+use std::thread::sleep;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub struct ExoscaleProvider {
@@ -70,7 +70,7 @@ impl ExoscaleProvider {
     }
 
     pub async fn get_devpod_instance(&self) -> Result<Box<ListInstances200ResponseInstancesInner>> {
-        let instances = exoscale_rs::apis::instance_api::list_instances(
+        let instances = match exoscale_rs::apis::instance_api::list_instances(
             &self.configuration,
             ListInstancesParams {
                 ip_address: None,
@@ -78,44 +78,47 @@ impl ExoscaleProvider {
                 manager_type: None,
             },
         )
-        .await;
-        if let Err(err) = instances {
-            return Err(anyhow::anyhow!("Error getting instance list: {}", err));
-        }
-        let instance_list = instances.unwrap().instances;
-        if instance_list.is_none() {
+        .await
+        {
+            Ok(instances) => instances,
+            Err(err) => return Err(anyhow::anyhow!("Error getting instance list: {}", err)),
+        };
+
+        let instance_list = match instances.instances {
+            Some(instance_list) => instance_list,
+            None => return Err(anyhow::anyhow!("No instance list found")),
+        };
+
+        if instance_list.is_empty() {
             return Err(anyhow::anyhow!("No instance found"));
         }
-
-        let instance: Box<ListInstances200ResponseInstancesInner> = Box::new(
-            instance_list
-                .unwrap()
-                .iter()
-                .find_map(|instance| {
-                    if instance
+        let found_instance = instance_list
+            .iter()
+            .find(|instance| {
+                if let (Some(_labels), Some(devpod_instance), Some(devpod_instance_id)) = (
+                    &instance.labels,
+                    instance
                         .labels
                         .as_ref()
-                        .unwrap()
-                        .get("devpod_instance".to_string().as_str())
-                        .unwrap()
-                        == "true".to_string().as_str()
-                        && instance
-                            .labels
-                            .as_ref()
-                            .unwrap()
-                            .get("devpod_instance_id".to_string().as_str())
-                            .unwrap()
-                            == self.options.machine_id.clone().as_str()
-                    {
-                        Some(instance.clone())
-                    } else {
-                        None
-                    }
-                })
-                .unwrap(),
-        );
+                        .and_then(|l| l.get("devpod_instance")),
+                    instance
+                        .labels
+                        .as_ref()
+                        .and_then(|l| l.get("devpod_instance_id")),
+                ) {
+                    *devpod_instance == "true"
+                        && *devpod_instance_id == self.options.machine_id.clone()
+                } else {
+                    false
+                }
+            })
+            .cloned();
 
-        Ok(instance)
+        if let Some(instance) = found_instance {
+            Ok(Box::new(instance))
+        } else {
+            Err(anyhow::anyhow!("No matching instance found"))
+        }
     }
 
     pub async fn init(&self) -> Result<()> {
@@ -133,14 +136,33 @@ impl ExoscaleProvider {
 
     pub async fn delete(&self) -> Result<()> {
         let devpod_instance = self.get_devpod_instance().await?;
-        let id: Option<Uuid> = devpod_instance.id;
+        let instance_id: Option<Uuid> = devpod_instance.id;
+        let sg_id: String = devpod_instance
+            .security_groups
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .id
+            .unwrap()
+            .to_string();
+
+        // Delete the instance
         exoscale_rs::apis::instance_api::delete_instance(
             &self.configuration,
             DeleteInstanceParams {
-                id: id.as_ref().unwrap().to_string(),
+                id: instance_id.as_ref().unwrap().to_string(),
             },
         )
         .await?;
+
+        sleep(Duration::from_secs(10));
+        //Delete security group
+        exoscale_rs::apis::security_group_api::delete_security_group(
+            &self.configuration,
+            DeleteSecurityGroupParams { id: sg_id },
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -173,16 +195,16 @@ impl ExoscaleProvider {
         Ok(())
     }
 
-    pub async fn state(&self) -> Result<String> {
+    pub async fn status(&self) -> Result<String> {
         let devpod_instance = self.get_devpod_instance().await?;
-        if devpod_instance.state == Option::from(exoscale_rs::models::InstanceState::Running) {
-            Ok("Running".to_string())
-        } else if devpod_instance.state == Option::from(exoscale_rs::models::InstanceState::Stopped)
-        {
-            Ok("Stopped".to_string())
-        } else {
-            Ok("Error".to_string())
-        }
+
+        let status = match devpod_instance.state.unwrap().to_string().as_str() {
+            "running" => "Running",
+            "stopped" => "Stopped",
+            _ => "Error",
+        };
+
+        Ok(status.parse()?)
     }
 
     pub async fn create(&self) -> Result<()> {
@@ -192,7 +214,7 @@ impl ExoscaleProvider {
             &self.configuration,
             CreateSecurityGroupParams {
                 create_security_group_request: CreateSecurityGroupRequest {
-                    name: "devpod-sg".to_string(),
+                    name: self.options.machine_id.clone().to_string() + "-sg",
                     description: Some("Security group for devpod instance".to_string()),
                 },
             },
@@ -204,7 +226,7 @@ impl ExoscaleProvider {
 
         let security_group_resource: Box<SecurityGroupResource> = Box::new(SecurityGroupResource {
             id: sg_result.as_ref().unwrap().reference.as_ref().unwrap().id,
-            name: Some("devpod-sg".to_string()),
+            name: Some(self.options.machine_id.clone().to_string() + "-sg"),
             visibility: Option::from(Visibility::Private),
         });
 
@@ -330,30 +352,8 @@ impl ExoscaleProvider {
             "devpod_instance_id".to_string(),
             self.options.machine_id.clone(),
         );
-        labels.insert(
-            "devpod_instance_folder".to_string(),
-            self.options.machine_folder.clone(),
-        );
 
-        let ssh_key: Box<SshKey> = Box::new(SshKey {
-            name: Some("devpod-ssh-key".to_string()),
-            fingerprint: None,
-        });
-
-        let _ssh = exoscale_rs::apis::ssh_key_api::register_ssh_key(
-            &self.configuration,
-            RegisterSshKeyParams {
-                register_ssh_key_request: RegisterSshKeyRequest {
-                    name: "devpod-ssh-key".to_string(),
-                    public_key: public_key_base.clone(),
-                },
-            },
-        )
-        .await;
-        if let Err(err) = _ssh {
-            return Err(anyhow::anyhow!("Error creating ssh key: {}", err));
-        }
-        let user_data = encode(&format!(
+        let user_data = general_purpose::STANDARD.encode(format!(
             r#"#cloud-config
             users:
             - name: devpod
@@ -364,6 +364,7 @@ impl ExoscaleProvider {
               sudo: [ "ALL=(ALL) NOPASSWD:ALL" ]"#,
             public_key_base
         ));
+
         // Constructing the request parameters for Instance creation
         let instance_request = exoscale_rs::models::CreateInstanceRequest {
             anti_affinity_groups: None,
@@ -383,7 +384,7 @@ impl ExoscaleProvider {
             deploy_target: None,
             public_ip_assignment: Some(exoscale_rs::models::PublicIpAssignment::Inet4),
             name: Some(self.options.machine_id.clone().to_string()),
-            ssh_key: Option::from(ssh_key),
+            ssh_key: None,
             ipv6_enabled: None,
             ssh_keys: None,
         };
