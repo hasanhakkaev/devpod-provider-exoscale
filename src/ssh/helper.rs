@@ -1,78 +1,56 @@
 use exoscale_rs::models::instance_type::Size;
-use ssh2::{Error, ErrorCode, Session};
-use std::io;
-use std::io::{Read, Write};
+use ssh2::{Error, Session};
+use std::io::Read;
 use std::net::TcpStream;
 
-pub async fn new_ssh_client(
+pub async fn execute_command(
     user: String,
     ip: String,
     privatekey: String,
     command: String,
 ) -> Result<String, Error> {
-    if let Ok(stream) = TcpStream::connect(format!("{}:22", ip)) {
-        let mut sess = Session::new().unwrap();
-        sess.set_tcp_stream(stream);
-        sess.handshake().unwrap();
+    let mut sess = Session::new()?;
 
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        {
-            sess.userauth_pubkey_memory(&user, None, &privatekey, None)
-                .unwrap();
-        }
-        #[cfg(target_os = "windows")]
-        {
-            sess.userauth_pubkey_file(&user, None, std::path::Path::new(&privatekey), None)
-                .unwrap();
-        }
-        let mut channel = sess.channel_session().unwrap();
-        channel.exec(command.as_str()).unwrap();
+    let tcp = TcpStream::connect(format!("{}:22", ip)).unwrap();
 
-        let mut buffer = [0; 100 * 1024];
-        let mut stdin = io::stdin();
-        let mut stdout = io::stdout();
+    sess.set_tcp_stream(tcp);
+    sess.handshake()?;
 
-        loop {
-            let size2 = match channel.stderr().read(&mut buffer) {
-                Ok(size2) => size2,
-                Err(_) => break,
-            };
-            if size2 > 0 {
-                eprint!("{}", std::str::from_utf8(&buffer[..size2]).unwrap());
-            }
-
-            let size = match channel.read(&mut buffer) {
-                Ok(size) => size,
-                Err(_) => break,
-            };
-            if size > 0 {
-                let data = std::str::from_utf8(&buffer[..size]).unwrap();
-                if data.contains("ping") {
-                    stdout.write_all(&buffer[..size]).unwrap();
-                    stdin.read_exact(&mut buffer[..size]).unwrap();
-                    channel.write_all(&buffer[..size]).unwrap();
-                } else {
-                    stdout.write_all(&buffer[..size]).unwrap();
-                }
-            } else {
-                channel.send_eof().unwrap();
-                channel.wait_close().unwrap();
-                break;
-            }
-        }
-        Ok("".to_string())
-    } else {
-        Err(Error::new(
-            ErrorCode::Session(0),
-            "Error connecting to ssh server",
-        ))
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        sess.userauth_pubkey_memory(&user, None, &privatekey, None)?;
     }
+    #[cfg(target_os = "windows")]
+    {
+        sess.userauth_pubkey_file(&user, None, std::path::Path::new(&privatekey), None)?;
+    }
+
+    let mut channel = sess.channel_session()?;
+    channel.exec(&command)?;
+
+    let mut output = String::new();
+    let mut buffer = [0; 1024];
+
+    loop {
+        let size = match channel.read(&mut buffer) {
+            Ok(size) if size > 0 => {
+                output.push_str(std::str::from_utf8(&buffer[..size]).unwrap());
+                size
+            }
+            Ok(_) => break,
+            Err(_err) => {
+                let ssh2_err = Error::last_session_error(&sess).unwrap();
+                return Err(ssh2_err);
+            }
+        };
+
+        if size == 0 {
+            break;
+        }
+    }
+
+    Ok(output)
 }
-
-/*pub fn execute_command(command: String, sess: Session) -> Result<String, Error> {
-    Ok("".to_string())
-}*/
-
 pub fn map_str_to_size(size_str: &str) -> Option<Size> {
     match size_str {
         "large" => Some(Size::Large),

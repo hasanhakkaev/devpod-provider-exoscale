@@ -14,6 +14,10 @@ impl Command {
         match exoscale {
             Ok(provider) => {
                 let command = env::var("COMMAND");
+                match command {
+                    Ok(..) => (),
+                    Err(err) => return Err(anyhow::anyhow!("Error getting COMMAND: {}", err)),
+                }
                 let private_key;
                 #[cfg(any(target_os = "linux", target_os = "macos"))]
                 {
@@ -29,7 +33,7 @@ impl Command {
                 }
                 let instance = provider.get_devpod_instance().await?;
 
-                let result = ssh::helper::new_ssh_client(
+                let result = ssh::helper::execute_command(
                     "devpod".to_string(),
                     instance.public_ip.unwrap().clone(),
                     private_key.clone(),

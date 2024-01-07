@@ -122,15 +122,7 @@ impl ExoscaleProvider {
     }
 
     pub async fn init(&self) -> Result<()> {
-        let _list = exoscale_rs::apis::instance_api::list_instances(
-            &self.configuration,
-            ListInstancesParams {
-                ip_address: None,
-                manager_id: None,
-                manager_type: None,
-            },
-        )
-        .await?;
+        let _list = exoscale_rs::apis::zone_api::list_zones(&self.configuration).await?;
         Ok(())
     }
 
@@ -140,7 +132,7 @@ impl ExoscaleProvider {
         let sg_id: String = devpod_instance
             .security_groups
             .unwrap()
-            .get(0)
+            .first()
             .unwrap()
             .id
             .unwrap()
@@ -195,16 +187,18 @@ impl ExoscaleProvider {
         Ok(())
     }
 
-    pub async fn status(&self) -> Result<String> {
+    pub async fn status(&self) -> Result<&str> {
         let devpod_instance = self.get_devpod_instance().await?;
 
         let status = match devpod_instance.state.unwrap().to_string().as_str() {
             "running" => "Running",
             "stopped" => "Stopped",
-            _ => "Error",
+            "notfound" => "NotFound",
+            "busy" => "Busy",
+            _ => "NotFound",
         };
 
-        Ok(status.parse()?)
+        Ok(status)
     }
 
     pub async fn create(&self) -> Result<()> {

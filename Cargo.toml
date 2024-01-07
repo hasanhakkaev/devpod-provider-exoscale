@@ -11,12 +11,12 @@ keywords = ["devpod","exoscale"]
 
 
 [dependencies]
-anyhow = { version = "1.0.75", features = [] }
-clap = { version = "4.4.11", features = ["derive"] }
-exoscale-rs = "2.0.3"
+anyhow = { version = "1.0.79", features = [] }
+clap = { version = "4.4.13", features = ["derive"] }
+exoscale-rs = "2.0.4"
 openssh-keys = "0.6.2"
-openssl = { version = "0.10.61", features = ["vendored"] }
+openssl = { version = "0.10.62", features = ["vendored"] }
 ssh2 = "0.9.4"
-tokio = { version = "1.35.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.6.1", features = ["v4"] }
 base64 = { version = "0.21.5", features = [] }
