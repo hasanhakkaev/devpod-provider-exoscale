@@ -11,7 +11,7 @@ keywords = ["devpod","exoscale"]
 
 
 [dependencies]
-anyhow = { version = "1.0.79", features = [] }
+anyhow = { version = "1.0.86", features = [] }
 clap = { version = "4.5.2", features = ["derive"] }
 exoscale-rs = "2.0.4"
 openssh-keys = "0.6.2"
