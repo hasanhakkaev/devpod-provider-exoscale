@@ -7,16 +7,17 @@ authors = ["Hasan Hakkaev <hasan.hakkaev@gmx.at>"]
 repository = "https://github.com/hasanhakkaev/devpod-provider-exoscale"
 license = "MPL-2.0"
 readme = "README.md"
-keywords = ["devpod","exoscale"]
+keywords = ["devpod", "exoscale"]
 
 
 [dependencies]
-anyhow = { version = "1.0.79", features = [] }
-clap = { version = "4.5.2", features = ["derive"] }
+anyhow = { version = "1.0.86", features = [] }
+clap = { version = "4.5.4", features = ["derive"] }
 exoscale-rs = "2.0.4"
-openssh-keys = "0.6.2"
+openssh-keys = "0.6.3"
 openssl = { version = "0.10.64", features = ["vendored"] }
 ssh2 = "0.9.4"
-tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "1.7.0", features = ["v4"] }
-base64 = { version = "0.22.0", features = [] }
+tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1.8.0", features = ["v4"] }
+base64 = { version = "0.22.1", features = [] }
+thiserror = "1.0.61"

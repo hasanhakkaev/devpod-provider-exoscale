@@ -245,7 +245,7 @@ impl ExoscaleProvider {
                 AddRuleToSecurityGroupParams {
                     id: security_group_resource.id.unwrap().to_string(),
                     add_rule_to_security_group_request: AddRuleToSecurityGroupRequest {
-                        description: Some(("desc").to_string()),
+                        description: Some("desc".to_string()),
                         start_port: Some(22),
                         end_port: Some(22),
                         flow_direction: exoscale_rs::models::add_rule_to_security_group_request::FlowDirection::Ingress,
