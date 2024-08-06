@@ -19,4 +19,4 @@ openssl = { version = "0.10.66", features = ["vendored"] }
 ssh2 = "0.9.4"
 tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.10.0", features = ["v4"] }
-base64 = { version = "0.22.0", features = [] }
+base64 = { version = "0.22.1", features = [] }
