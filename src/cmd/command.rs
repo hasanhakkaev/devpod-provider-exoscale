@@ -37,13 +37,13 @@ impl Command {
                     "devpod".to_string(),
                     instance.public_ip.unwrap().clone(),
                     private_key.clone(),
-                    command.unwrap(),
+                    command?,
                 )
                 .await;
                 match result {
                     Err(err) => return Err(anyhow::anyhow!("Error creating ssh client: {}", err)),
                     _ => {
-                        println!("{}", result.unwrap());
+                        println!("{}", result?);
                     }
                 }
             }

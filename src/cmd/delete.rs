@@ -12,10 +12,7 @@ impl Delete {
         let exoscale = ExoscaleProvider::new_provider(false);
         match exoscale {
             Ok(provider) => {
-                let create = provider.delete().await;
-                if let Err(err) = create {
-                    return Err(anyhow::anyhow!("Error deleting instance: {}", err));
-                }
+                provider.delete().await?;
             }
             Err(err) => return Err(err),
         }

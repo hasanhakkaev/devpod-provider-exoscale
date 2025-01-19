@@ -15,7 +15,7 @@ impl Status {
                 if let Err(err) = status {
                     return Err(anyhow::anyhow!("Error getting instance status: {}", err));
                 }
-                println!("{}", status.unwrap());
+                println!("{}", status?);
             }
             Err(err) => return Err(err),
         }

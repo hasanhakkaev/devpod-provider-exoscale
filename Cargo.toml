@@ -1,7 +1,7 @@
 [package]
 name = "devpod-provider-exoscale"
 description = "DevPod provider for Exoscale Cloud"
-version = "0.0.5"
+version = "0.1.0"
 edition = "2021"
 authors = ["Hasan Hakkaev <hasan.hakkaev@gmx.at>"]
 repository = "https://github.com/hasanhakkaev/devpod-provider-exoscale"
@@ -11,13 +11,13 @@ keywords = ["devpod", "exoscale"]
 
 
 [dependencies]
-anyhow = { version = "1.0.86", features = [] }
-clap = { version = "4.5.4", features = ["derive"] }
-exoscale-rs = "2.0.4"
-openssh-keys = "0.6.3"
-openssl = { version = "0.10.64", features = ["vendored"] }
+anyhow = { version = "1.0.95", features = [] }
+clap = { version = "4.5.26", features = ["derive"] }
+exoscale-rs = "2.1.0"
+openssh-keys = "0.6.4"
+openssl = { version = "0.10.68", features = ["vendored"] }
 ssh2 = "0.9.4"
-tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "1.8.0", features = ["v4"] }
+tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1.12.0", features = ["v4"] }
 base64 = { version = "0.22.1", features = [] }
-thiserror = "1.0.61"
+thiserror = "2.0.11"
