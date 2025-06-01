@@ -29,29 +29,11 @@ impl ExoscaleProvider {
         let zone =
             env::var("EXOSCALE_ZONE").context("Please set EXOSCALE_ZONE environment variable");
 
-        let mut configuration = Configuration::new(zone.as_ref().unwrap());
+        let configuration = Configuration::new(&zone?, api_key?, api_secret?);
         let options = from_env(init);
 
-        match api_key {
-            Ok(api_key) => {
-                configuration.api_key = api_key;
-            }
-            Err(err) => return Err(anyhow::anyhow!("Error getting API key: {}", err)),
-        }
-        match api_secret {
-            Ok(api_secret) => {
-                configuration.api_secret = api_secret;
-            }
-            Err(err) => return Err(anyhow::anyhow!("Error getting API secret: {}", err)),
-        }
-        match zone {
-            Ok(zone) => {
-                configuration.zone = zone;
-            }
-            Err(err) => return Err(anyhow::anyhow!("Error getting ZONE: {}", err)),
-        }
         let provider = ExoscaleProvider {
-            configuration,
+            configuration: configuration?,
             options,
         };
 
@@ -128,13 +110,13 @@ impl ExoscaleProvider {
         // Delete the instance
         exoscale_rs::apis::instance_api::delete_instance(
             &self.configuration,
-            &instance_id.as_ref().unwrap().to_string(),
+            instance_id.as_ref().unwrap().to_string(),
         )
         .await?;
 
         // sleep(Duration::from_secs(10));
         //Delete security group
-        exoscale_rs::apis::security_group_api::delete_security_group(&self.configuration, &sg_id)
+        exoscale_rs::apis::security_group_api::delete_security_group(&self.configuration, sg_id)
             .await?;
 
         Ok(())
@@ -145,7 +127,7 @@ impl ExoscaleProvider {
         let id: Option<Uuid> = devpod_instance.id;
         exoscale_rs::apis::instance_api::start_instance(
             &self.configuration,
-            &id.as_ref().unwrap().to_string(),
+            id.as_ref().unwrap().to_string(),
             StartInstanceRequest {
                 rescue_profile: Option::from(NetbootEfi),
             },
@@ -159,7 +141,7 @@ impl ExoscaleProvider {
         let id: Option<Uuid> = devpod_instance.id;
         exoscale_rs::apis::instance_api::stop_instance(
             &self.configuration,
-            &id.as_ref().unwrap().to_string(),
+            id.as_ref().unwrap().to_string(),
         )
         .await?;
         Ok(())
@@ -203,7 +185,7 @@ impl ExoscaleProvider {
 
         let _s = exoscale_rs::apis::security_group_api::add_external_source_to_security_group(
             &self.configuration,
-            &security_group_resource.id.unwrap().to_string(),
+            security_group_resource.id.unwrap().to_string(),
             AddExternalSourceToSecurityGroupRequest {
                 cidr: "0.0.0.0/0".to_string(),
             },
@@ -215,7 +197,7 @@ impl ExoscaleProvider {
 
         let _r = exoscale_rs::apis::security_group_api::add_rule_to_security_group(
             &self.configuration,
-            &security_group_resource.id.unwrap().to_string(),
+            security_group_resource.id.unwrap().to_string(),
             AddRuleToSecurityGroupRequest {
                 description: Some("desc".to_string()),
                 start_port: Some(22),
@@ -238,7 +220,7 @@ impl ExoscaleProvider {
 
         let security_group = exoscale_rs::apis::security_group_api::get_security_group(
             &self.configuration,
-            &sg_result
+            sg_result
                 .reference
                 .as_ref()
                 .unwrap()
@@ -337,12 +319,14 @@ impl ExoscaleProvider {
                 rules: None,
             }]),
             user_data: Some(user_data),
+            tpm_enabled: None,
             deploy_target: None,
             public_ip_assignment: Some(exoscale_rs::models::PublicIpAssignment::Inet4),
             name: Some(self.options.machine_id.clone().to_string()),
             ssh_key: None,
             ipv6_enabled: None,
             ssh_keys: None,
+            secureboot_enabled: None,
         };
 
         // let instance_create_params = CreateInstanceParams {
